@@ -1,27 +1,44 @@
 import boto3
-#import sys
 import click
 
-#session = boto3.Session(profile_name='DEV6888', region_name='eu-west-1')
-#ec2 = session.resource('ec2')
 ec2 = boto3.resource('ec2')
 
-@click.command()
-#@click.option('--project', default=None,
-#    help="Only instanaces for project (tag ProjectL<name>)")
-def list_instances():
-    for i in ec2.instances.all():
+def filter_instances(test):
+    instances = []
+
+    if test:
+        filters = [{'Name':'tag:TEST', 'Values':["DEVP_VM_AM_ML_SPRINT"]}]
+        instances = ec2.instances.filter(Filters=filters)
+    else:
+        #instances = ec2.instances.all()
+        print("No action - DUMMY Message")
+    return instances
+
+@click.group()
+def instances():
+    """Command for instances"""
+
+@instances.command('list')
+@click.option('--test', default=None,
+    help="Only instances for project (tag ProjectL<name>)")
+def list_instances(test):
         "List the EC2 Instances"
-        print(', '.join((
-            i.id,
-            i.instance_type,
-            i.placement['AvailabilityZone'],
-            i.state['Name'],
-            i.instance_id,
-            i.image_id,
-            i.public_dns_name)))
-    running_instances()
-    return
+
+        instances = filter_instances(test)
+
+        for i in instances:
+            tags = { t['Key']: t['Value'] for t in i.tags or []}
+            print(', '.join((
+                i.id,
+                i.instance_type,
+                i.placement['AvailabilityZone'],
+                i.state['Name'],
+                i.instance_id,
+                i.image_id,
+                i.public_dns_name,
+                tags.get('Name', '<no project>'))))
+        #running_instances()
+        return
 
 def running_instances():
     instances = ec2.instances.filter(
@@ -29,7 +46,39 @@ def running_instances():
     for instance in instances:
         print(instance.id, instance.instance_type)
 
+
+
+@instances.command('start')
+@click.option('--test', default=None,
+    help='Only instances for Test prefix')
+def stop_instances(test):
+    "Start EC2 instances"
+
+    instances = filter_instances(test)
+
+    for i in instances:
+        print("Starting {0} ....".format(i.id))
+        i.start()
+
+    return
+
+
+
+@instances.command('stop')
+@click.option('--test', default=None,
+    help='Only instances for Test prefix')
+def stop_instances(test):
+    "Stop EC2 instances"
+
+    instances = filter_instances(test)
+
+    for i in instances:
+        print("Stopping {0} ....".format(i.id))
+        i.stop()
+
+    return
+
+
+
 if __name__ == "__main__":
-    #print(sys.argv)
-    list_instances()
-    #running_instances()
+    instances()
