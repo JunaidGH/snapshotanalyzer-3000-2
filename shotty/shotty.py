@@ -1,5 +1,6 @@
 import boto3
 import click
+import botocore
 
 ec2 = boto3.resource('ec2')
 
@@ -73,7 +74,6 @@ def list_volumes(test):
 def instances():
     """Command for instances"""
 
-
 @instances.command('snapshot',
     help="Create snapshots of all volumes")
 @click.option('--test', default=None,
@@ -141,7 +141,11 @@ def stop_instances(test):
 
     for i in instances:
         print("Starting {0} ....".format(i.id))
-        i.start()
+        try:
+            i.start()
+        except botocore.exceptions.ClientError as e:
+            print("Could not start {0}".format(i.id) + str(e))
+            continue
 
     return
 
@@ -155,7 +159,11 @@ def stop_instances(test):
 
     for i in instances:
         print("Stopping {0} ....".format(i.id))
-        i.stop()
+        try:
+            i.stop()
+        except botocore.exceptions.ClientError as e:
+            print("Could not stop {0}".format(i.id) + str(e))
+            continue
 
     return
 
